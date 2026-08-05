@@ -128,7 +128,7 @@ jobs:
 
   # ─── Full build job (only on manual trigger or tags) ─────────────────
   build:
-    name: Build APK (full Firefox build)
+    name: Build APK (in Docker, full Firefox build)
     runs-on: ubuntu-22.04
     timeout-minutes: 360
     continue-on-error: true
@@ -142,28 +142,30 @@ jobs:
 
       - name: Warn about build requirements
         run: |
-          echo "╔══════════════════════════════════════════════════════════════╗"
-          echo "║  ⚠️  FULL FIREFOX BUILD — EXPECT FAILURE ON FREE RUNNERS    ║"
-          echo "║                                                              ║"
-          echo "║  This job requires:                                          ║"
-          echo "║    • ~50 GB disk space (free runner has ~14 GB)             ║"
-          echo "║    • ~32 GB RAM (free runner has 7 GB)                      ║"
-          echo "║    • 3-6 hours wall clock (free runner limit: 6 hours)      ║"
-          echo "║                                                              ║"
-          echo "║  The build will likely fail at:                             ║"
-          echo "║    1. Source download (GitLab-specific download scripts)     ║"
-          echo "║    2. Gecko C++/Rust compilation (OOM)                       ║"
-          echo "║    3. Gradle build (memory)                                 ║"
-          echo "║                                                              ║"
-          echo "║  For a successful build, use a self-hosted runner with      ║"
-          echo "║  64 GB RAM and 200 GB SSD. See README.md for details.       ║"
-          echo "╚══════════════════════════════════════════════════════════════╝"
+          cat <<'BANNER'
+          ╔══════════════════════════════════════════════════════════════╗
+          ║  ⚠️  FULL FIREFOX BUILD — EXPECT FAILURE ON FREE RUNNERS    ║
+          ║                                                              ║
+          ║  This job runs the build inside the official IronFox Docker  ║
+          ║  image (Fedora 43) which has all required tools.             ║
+          ║                                                              ║
+          ║  Requirements for SUCCESS:                                   ║
+          ║    • ~50 GB disk space (free runner has ~14 GB)             ║
+          ║    • ~32 GB RAM (free runner has 7 GB — will OOM)           ║
+          ║    • 3-6 hours wall clock (free runner limit: 6 hours)      ║
+          ║                                                              ║
+          ║  The build will likely fail at Gecko C++/Rust compilation   ║
+          ║  due to OOM. For a successful build, use a self-hosted      ║
+          ║  runner with 64 GB RAM and 200 GB SSD.                      ║
+          ╚══════════════════════════════════════════════════════════════╝
+          BANNER
 
       - name: Free up disk space
         run: |
           echo "=== Disk space before cleanup ==="
           df -h /
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost /usr/lib/jvm/* /usr/local/share/chrom* 2>/dev/null || true
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost /usr/lib/jvm/* /usr/local/share/chrom* 2>/dev/null || true
           sudo apt-get clean
           sudo apt-get autoremove -y
           echo "=== Disk space after cleanup ==="
@@ -175,66 +177,77 @@ jobs:
           echo "RAM: $(free -h | awk '/^Mem:/{print $2}')"
           echo "Disk: $(df -h / | awk 'NR==2{print $4}') free"
 
-      - name: Install build dependencies
+      - name: Pull IronFox Docker image
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            build-essential cmake clang gawk git jq m4 make nasm ninja-build \
-            patch perl python3 python3-pip xz-utils zlib1g-dev curl wget unzip \
-            lib32z1 libncurses6 libstdc++6 libgtk-3-0 libasound2 \
-            libdbus-glib-1-2 libx11-xcb1 libxcomposite1 libxdamage1 \
-            libxrandr2 libatk1.0-0 libatk-bridge2.0-0 libpango-1.0-0 \
-            libcairo2 libgdk-pixbuf-2.0-0
-          # yq (Mike Farah's Go version)
-          sudo wget -qO /usr/local/bin/yq \
-            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
-          yq --version
-          which shasum && shasum --version
-          echo "Dependencies installed."
+          echo "Pulling IronFox build image (Fedora 43 with all build tools)..."
+          docker pull registry.gitlab.com/ironfox-oss/ironfox:latest
+          echo "✓ Docker image pulled"
 
-      - name: Configure Git
+      - name: Run build in Docker
+        timeout-minutes: 330
         run: |
-          git config --global user.email "ci@ironfoxoss.org"
-          git config --global user.name "IronFox CI"
+          echo "=== Running IronFox build inside Docker container ==="
+          echo "This will: download sources → apply patches → prebuild → build APK"
+          echo "Expected time: 3-6 hours (if it doesn't OOM first)"
+          echo ""
 
-      - name: Set up environment
-        run: |
-          export CI_PIPELINE_CREATED_AT="${CI_PIPELINE_CREATED_AT:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
-          echo "CI_PIPELINE_CREATED_AT=$CI_PIPELINE_CREATED_AT" >> "$GITHUB_ENV"
-          bash scripts/env.sh || true
+          # Run the full build pipeline inside the IronFox Docker image
+          # The container has Fedora 43 with all required tools (curl with --clobber,
+          # yq, shasum, clang, nasm, etc.)
+          docker run --rm \
+            -v "$PWD:/app" \
+            -w /app \
+            -e IRONFOX_CI=1 \
+            -e IRONFOX_RELEASE=0 \
+            -e IRONFOX_CHANNEL=stable \
+            -e IRONFOX_SIGN=0 \
+            -e CI_PIPELINE_CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --memory=6g \
+            --memory-swap=6g \
+            --cpus=3 \
+            registry.gitlab.com/ironfox-oss/ironfox:latest \
+            /bin/bash -c '
+              set -e
+              echo "=== Inside IronFox Docker container ==="
+              cat /etc/os-release | head -3
+              echo ""
+              echo "=== Tool versions ==="
+              curl --version | head -1
+              yq --version
+              shasum --version
+              echo ""
 
-      - name: Download sources
-        timeout-minutes: 60
-        continue-on-error: true
-        env:
-          CI_PIPELINE_CREATED_AT: ${{ env.CI_PIPELINE_CREATED_AT }}
-        run: |
-          echo "Downloading Firefox + toolchain sources (~10 GB)..."
-          bash scripts/get_sources.sh all download 2>&1 | tail -50
-          echo "Download step completed (may have partial failures)."
+              echo "=== Step 1/4: Initialize environment ==="
+              bash scripts/env.sh
+              echo ""
 
-      - name: Apply patches
-        timeout-minutes: 30
-        continue-on-error: true
-        run: |
-          echo "Applying IronFox patches..."
-          bash scripts/patches.sh 2>&1 | tail -30 || true
+              echo "=== Step 2/4: Download sources (~10 GB) ==="
+              bash scripts/get_sources.sh all download 2>&1 | tail -30
+              echo ""
 
-      - name: Prebuild
-        timeout-minutes: 60
-        continue-on-error: true
-        run: |
-          echo "Running prebuild..."
-          bash scripts/prebuild.sh 2>&1 | tail -30 || true
+              echo "=== Step 3/4: Apply patches + prebuild ==="
+              bash scripts/patches.sh 2>&1 | tail -20
+              bash scripts/prebuild.sh 2>&1 | tail -20
+              echo ""
 
-      - name: Build (arm64)
-        timeout-minutes: 300
-        continue-on-error: true
+              echo "=== Step 4/4: Build APK (arm64) ==="
+              echo "⚠️  This is where it will likely OOM on 6 GB RAM limit"
+              bash scripts/build.sh arm64 fenix 2>&1 | tail -50
+              echo ""
+
+              echo "=== Build pipeline finished ==="
+              find build/src/mobile/android/fenix/app/build/outputs -name "*.apk" -o -name "*.aab" 2>/dev/null || true
+            ' || echo "Docker build exited with error (expected — see logs above)"
+
+      - name: Find any APK/AAB artifacts produced
+        if: always()
         run: |
-          echo "Building IronFox for arm64..."
-          echo "⚠️  This will likely OOM on a 7 GB runner."
-          bash scripts/build.sh arm64 fenix 2>&1 | tail -100 || true
+          echo "=== Searching for build outputs ==="
+          find . -name "*.apk" -o -name "*.aab" 2>/dev/null | head -20
+          echo ""
+          echo "=== Build artifacts directory ==="
+          ls -la artifacts/ 2>/dev/null || echo "(no artifacts dir)"
+          ls -la artifacts/apk/ 2>/dev/null || echo "(no apk dir)"
 
       - name: Upload build artifacts
         if: always()
