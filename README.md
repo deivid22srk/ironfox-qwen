@@ -9,9 +9,9 @@
 On top of upstream IronFox (Firefox 153.0.3 for Android, hardened):
 
 1. **Qwen Agent Studio extension pre-installed** — the extension from [deivid22srk/qwen-agent-extension](https://github.com/deivid22srk/qwen-agent-extension) is registered as a built-in addon and auto-installed on first launch.
-2. **Patch `fenix-bundle-qwen-agent.patch`** — modifies `IronFoxAddons.kt` to include the extension in the built-in addon list and install it on startup.
-3. **GitHub Actions `build.yml`** — compiles the APK in CI (see [Limitations](#build-limitations) below).
-4. **Bundled extension source** — the full extension source lives in `assets/qwen-agent-extension/` for reference and offline builds.
+2. **Modified overlay file** — `patches/fenix-overlay/.../IronFoxAddons.kt` adds the `QWEN_AGENT_STUDIO` addon definition with download URL pointing to the extension's GitHub releases.
+3. **GitHub Actions `build.yml`** — two-job CI: (a) validation job that checks patches, extension syntax, and builds the .xpi; (b) full Docker build job that runs the IronFox build inside the official Fedora 43 Docker image.
+4. **Bundled extension source** — the full extension source lives in `assets/qwen-agent-extension/` for reference and .xpi packaging.
 
 ## What is Qwen Agent Studio?
 
@@ -125,10 +125,9 @@ After a successful build:
 
 | File | Change |
 |------|--------|
-| `patches/fenix-bundle-qwen-agent.patch` | NEW — adds Qwen Agent Studio to built-in addons |
-| `scripts/patches.yaml` | MODIFIED — registers the new patch |
-| `assets/qwen-agent-extension/` | NEW — full extension source (for reference) |
-| `.github/workflows/build.yml` | NEW — GitHub Actions CI for APK compilation |
+| `patches/fenix-overlay/app/src/main/java/org/ironfoxoss/ironfox/utils/IronFoxAddons.kt` | MODIFIED — adds `QWEN_AGENT_STUDIO` addon definition, `isQwenAgentStudio()` method, and includes it in `isBuiltIn()` check |
+| `assets/qwen-agent-extension/` | NEW — full extension source (for reference and .xpi packaging) |
+| `.github/workflows/build.yml` | NEW — GitHub Actions CI: validation job (always runs) + full Docker build job (manual trigger) |
 | `README.md` | MODIFIED — this file |
 
 ## License

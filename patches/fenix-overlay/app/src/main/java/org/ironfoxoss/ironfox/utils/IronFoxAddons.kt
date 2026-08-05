@@ -32,26 +32,44 @@ object IronFoxAddons {
     downloadUrl = "https://addons.mozilla.org/firefox/downloads/latest/uBlock0@raymondhill.net/latest.xpi"
   )
 
+  val QWEN_AGENT_STUDIO = Addon(
+    id = "qwen-agent-studio@deividgames.extensions",
+    downloadUrl = "https://github.com/deivid22srk/qwen-agent-extension/releases/latest/download/qwen-agent-studio.xpi"
+  )
+
   /**
    * Determine whether an add-on is built-in
-   * 
+   *
    * @param addon The add-on we should check
    */
   fun isBuiltIn(addon: Addon): Boolean {
     if (addon.id == FXA_WEBCHANNEL.id || addon.id == ICONS.id || addon.id == READERVIEW.id || addon.id == WEBCOMPAT.id) {
       return true
     } else {
-      return false
+      return addon.id == QWEN_AGENT_STUDIO.id
     }
   }
 
   /**
    * Determine whether an add-on is uBlock Origin
-   * 
+   *
    * @param addon The add-on we should check
    */
   fun isUBlockOrigin(addon: Addon): Boolean {
     if (addon.id == UBLOCK_ORIGIN.id && addon.downloadUrl == UBLOCK_ORIGIN.downloadUrl) {
+        return true
+    } else {
+        return false
+    }
+  }
+
+  /**
+   * Determine whether an add-on is Qwen Agent Studio
+   *
+   * @param addon The add-on we should check
+   */
+  fun isQwenAgentStudio(addon: Addon): Boolean {
+    if (addon.id == QWEN_AGENT_STUDIO.id) {
         return true
     } else {
         return false

@@ -1093,9 +1093,3 @@ patches:
   effect: Users can toggle a UI option for an OLED-optimized dark theme, which helps
     improve visual comfort and power efficiency on OLED screens.
   category: User Interface
-- file: fenix-bundle-qwen-agent.patch
-  name: Fenix - Bundle Qwen Agent Studio extension
-  description: Adds the Qwen Agent Studio extension as a built-in addon.
-  reason: To provide agent capabilities (tool calling, project workspace) on chat.qwen.ai.
-  effect: Auto-installs the Qwen Agent Studio extension on first launch of IronFox.
-  category: User Experience
