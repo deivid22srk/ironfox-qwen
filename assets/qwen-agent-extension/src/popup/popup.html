@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Qwen Agent Studio</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="logo">◆</div>
+    <div>
+      <h1>Qwen Agent Studio</h1>
+      <p class="version">v0.1.0</p>
+    </div>
+  </header>
+
+  <section class="status">
+    <div class="status-row">
+      <span class="label">Active project</span>
+      <span class="value" id="activeProject">—</span>
+    </div>
+    <div class="status-row">
+      <span class="label">Tab</span>
+      <span class="value" id="tabStatus">checking…</span>
+    </div>
+  </section>
+
+  <section class="actions">
+    <button id="openQwen" class="primary">Open chat.qwen.ai</button>
+    <button id="toggleSidebar">Toggle sidebar</button>
+    <button id="newProject">New project</button>
+    <button id="openOptions">Settings</button>
+  </section>
+
+  <section class="projects">
+    <h2>Projects</h2>
+    <select id="projectSelect" size="5"></select>
+    <div class="project-actions">
+      <button id="selectBtn">Activate</button>
+      <button id="exportBtn">Export JSON</button>
+      <button id="deleteBtn" class="danger">Delete</button>
+    </div>
+  </section>
+
+  <footer>
+    <a href="https://github.com/deivid22srk/qwen-agent-extension" target="_blank">GitHub</a>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+#!/bin/bash
+
+# Script is used to update the F-Droid repository
+# This script is expected to be run in a CI environment
+# DO NOT execute this manually!
+
+set -euo pipefail
+
+# Set-up our environment
+if [[ -z "${IRONFOX_CI+x}" ]]; then
+  export IRONFOX_CI=1
+fi
+if [[ -z "${IRONFOX_SET_ENVS+x}" ]]; then
+  /bin/bash "$(realpath $(dirname "$0"))/env.sh"
+fi
+source "$(realpath $(dirname "$0"))/env.sh"
+
+# Include utilities
+source "${IRONFOX_UTILS}"
+
+# Set verbosity
+if [[ "${IRONFOX_VERBOSE}" == 1 ]]; then
+  set -x
+else
+  set +x
+fi
+
+# Function to download an APK for a desired release
+function download_release() {
+  local -r version="$1"
+  local -r arch="$2"
+  local -r output_dir="$3"
+  local -r target_apk="ironfox-${version}-${arch}.apk"
+  local -r target_expected_sha512sum="${target_apk}-sha512sum.txt"
+  local -r target_expected_sha512sum_url="https://releases.ironfoxoss.org/ironfox/releases/${version}/${arch}/${target_expected_sha512sum}"
+  local -r target_apk_url="https://releases.ironfoxoss.org/ironfox/releases/${version}/${arch}/${target_apk}"
+  local -r output_apk="${output_dir}/${target_apk}"
+  local -r output_expected_sha512sum="${output_dir}/${target_expected_sha512sum}"
+
+  # Download the APK
+  echo_red_text "Downloading ${target_apk} from ${target_apk_url}..."
+  "${IRONFOX_CURL}" ${IRONFOX_CURL_FLAGS} --location "${target_apk_url}" --output "${output_apk}"
+  echo_green_text "SUCCESS: Downloaded ${target_apk}"
+
+  # Check the SHA512sum
+  echo_red_text "Validating SHA512sum for ${target_apk}.."
+  "${IRONFOX_CURL}" ${IRONFOX_CURL_FLAGS} --location "${target_expected_sha512sum_url}" --output "${output_expected_sha512sum}"
+  local -r expected_sha512sum=$("${IRONFOX_CAT}" "${output_expected_sha512sum}" | "${IRONFOX_XARGS}")
+  local -r local_sha512sum=$("${IRONFOX_SHASUM}" -a 512 "${output_apk}" | "${IRONFOX_AWK}" '{print $1}')
+  if [[ "${local_sha512sum}" != "${expected_sha512sum}" ]]; then
+    echo_red_text 'ERROR: Checksum validation failed.'
+    echo "Expected SHA512sum: ${expected_sha512sum}"
+    echo "Actual SHA512sum:   ${local_sha512sum}"
+
+    # If checksum validation fails, also just clean-up the files
+    "${IRONFOX_RM}" -f "${output_apk}"
+    "${IRONFOX_RM}" -f "${output_expected_sha512sum}"
+    exit 1
+  fi
+  echo_green_text "SUCCESS: Checksum validated for ${target_apk}"
+  echo "SHA512sum: ${local_sha512sum}"
+}
+
+# Function to download all APKs for a desired release
+function download_releases() {
+  # ARM64
+  download_release "${IRONFOX_VERSION}" 'arm64-v8a' "${REPO_DIR_PATH}"
+
+  # ARM
+  download_release "${IRONFOX_VERSION}" 'armeabi-v7a' "${REPO_DIR_PATH}"
+
+  # x86_64
+  download_release "${IRONFOX_VERSION}" 'x86_64' "${REPO_DIR_PATH}"
+}
+
+"${IRONFOX_GIT}" clone --recurse-submodules "https://${IF_CI_USERNAME}:${GITLAB_CI_PUSH_TOKEN}@gitlab.com/${FDROID_REPO_PATH}.git" fdroid
+pushd fdroid || {
+  echo "Unable to pushd into 'fdroid'"
+  exit 1
+}
+"${IRONFOX_MKDIR}" -vp "${REPO_DIR_PATH}"
+"${IRONFOX_GIT}" lfs install
+
+# Download all variants of the latest release
+download_releases
+
+# Because we now upload releases to releases.ironfoxoss.org, the F-Droid repo doesn't need to store them all anymore
+# So to improve performance and reduce size, we can keep only the last 3 releases
+
+"${IRONFOX_CURL}" ${IRONFOX_CURL_FLAGS} --location 'https://releases.ironfoxoss.org/ironfox/releases/previous_release.txt' --output "${IRONFOX_ROOT}/previous_release.txt"
+"${IRONFOX_CURL}" ${IRONFOX_CURL_FLAGS} --location 'https://releases.ironfoxoss.org/ironfox/releases/previous_previous_release.txt' --output "${IRONFOX_ROOT}/previous_previous_release.txt"
+
+readonly previous_version=$("${IRONFOX_CAT}" "${IRONFOX_ROOT}/previous_release.txt" | "${IRONFOX_XARGS}")
+readonly previous_previous_version=$("${IRONFOX_CAT}" "${IRONFOX_ROOT}/previous_previous_release.txt" | "${IRONFOX_XARGS}")
+
+readonly current_apk_arm64="ironfox-${IRONFOX_VERSION}-arm64-v8a.apk"
+readonly previous_apk_arm64="ironfox-${previous_version}-arm64-v8a.apk"
+readonly previous_previous_apk_arm64="ironfox-${previous_previous_version}-arm64-v8a.apk"
+
+readonly current_apk_arm="ironfox-${IRONFOX_VERSION}-armeabi-v7a.apk"
+readonly previous_apk_arm="ironfox-${previous_version}-armeabi-v7a.apk"
+readonly previous_previous_apk_arm="ironfox-${previous_previous_version}-armeabi-v7a.apk"
+
+readonly current_apk_x86_64="ironfox-${IRONFOX_VERSION}-x86_64.apk"
+readonly previous_apk_x86_64="ironfox-${previous_version}-x86_64.apk"
+readonly previous_previous_apk_x86_64="ironfox-${previous_previous_version}-x86_64.apk"
+
+for apk in "${REPO_DIR_PATH}"/*.apk; do
+  apk_basename=$("${IRONFOX_BASENAME}" "${apk}")
+  if [[ "${apk_basename}" != "${current_apk_arm64}" ]] && [[ "${apk_basename}" != "${previous_apk_arm64}" ]] &&
+    [[ "${apk_basename}" != "${previous_previous_apk_arm64}" ]] && [[ "${apk_basename}" != "${current_apk_arm}" ]] &&
+    [[ "${apk_basename}" != "${previous_apk_arm}" ]] && [[ "${apk_basename}" != "${previous_previous_apk_arm}" ]] &&
+    [[ "${apk_basename}" != "${current_apk_x86_64}" ]] && [[ "${apk_basename}" != "${previous_apk_x86_64}" ]] &&
+    [[ "${apk_basename}" != "${previous_previous_apk_x86_64}" ]]; then
+    "${IRONFOX_RM}" -vf "${apk}"
+  fi
+done
+
+source "${IRONFOX_PYENV}"
+IFS=":" read -r vercode vername <<< "$("${IRONFOX_PYTHON}" "${IRONFOX_SCRIPTS}/get_latest_version.py" $("${IRONFOX_LS}" "${REPO_DIR_PATH}"/*.apk))"
+
+readonly META_FILE_PATH="${META_DIR_PATH}/${META_FILE_NAME}"
+
+"${IRONFOX_SED}" -i \
+  -e "s/CurrentVersion: .*/CurrentVersion: \"v${vername}\"/" \
+  -e "s/CurrentVersionCode: .*/CurrentVersionCode: ${vercode}/" "${META_FILE_PATH}"
+
+pushd "${META_DIR_PATH}" || {
+  echo "Unable to pushd into '${META_DIR_PATH}'"
+  exit 1
+}
+
+# Update metadata repository
+"${IRONFOX_GIT}" add "${META_FILE_NAME}"
+"${IRONFOX_GIT}" commit -m "feat: update for release ${CI_COMMIT_TAG}"
+"${IRONFOX_GIT}" push origin "HEAD:${META_REPO_BRANCH}"
+
+popd || {
+  echo "Unable to popd from '${META_DIR_PATH}'"
+  exit 1
+}
+
+# Update F-Droid repository
+"${IRONFOX_GIT}" add "${REPO_DIR_PATH}" "${META_DIR_PATH}"
+"${IRONFOX_GIT}" commit -m "feat: update for release ${CI_COMMIT_TAG}"
+"${IRONFOX_GIT}" push origin "HEAD:${FDROID_REPO_BRANCH}"
+
+popd # ignore error

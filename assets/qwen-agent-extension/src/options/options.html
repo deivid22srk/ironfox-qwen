@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Qwen Agent Studio — Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Qwen Agent Studio</h1>
+      <p class="subtitle">Settings</p>
+    </header>
+
+    <section>
+      <h2>Agent behaviour</h2>
+      <label class="row">
+        <input type="checkbox" id="autoInject">
+        <span>Auto-inject system prompt + project context before each user message</span>
+      </label>
+      <label class="row">
+        <span>Max tool calls per turn</span>
+        <input type="number" id="maxToolCalls" min="1" max="50" step="1">
+      </label>
+      <label class="row">
+        <input type="checkbox" id="allowWebFetch">
+        <span>Allow <code>web_fetch</code> tool (extension will fetch URLs server-side)</span>
+      </label>
+    </section>
+
+    <section>
+      <h2>UI</h2>
+      <label class="row">
+        <input type="checkbox" id="showSidebar">
+        <span>Show sidebar automatically when Qwen tab opens</span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Terminal allowlist</h2>
+      <p class="hint">Comma-separated list of commands allowed in the sandboxed <code>run_terminal</code> tool.</p>
+      <textarea id="terminalAllowlist" rows="4" cols="60"></textarea>
+    </section>
+
+    <section>
+      <h2>About</h2>
+      <p>Qwen Agent Studio v0.1.0 — transforms chat.qwen.ai into an autonomous coding agent.</p>
+      <p>Files are stored in the browser's Origin Private File System (OPFS), sandboxed per extension. Use "Export JSON" to back up a project to your Downloads folder.</p>
+      <p><a href="https://github.com/deivid22srk/qwen-agent-extension" target="_blank">Source &amp; docs</a></p>
+    </section>
+
+    <div class="actions">
+      <button id="save" class="primary">Save</button>
+      <button id="reset">Reset to defaults</button>
+    </div>
+    <div id="toast"></div>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>

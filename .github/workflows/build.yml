@@ -1,0 +1,236 @@
+name: Build IronFox APK
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: 'Target architecture (arm64-v8a recommended for runners)'
+        required: false
+        default: 'arm64-v8a'
+        type: choice
+        options:
+          - arm64-v8a
+          - armeabi-v7a
+          - x86_64
+          - universal
+
+env:
+  IRONFOX_CI: 1
+  IRONFOX_RELEASE: 0
+  IRONFOX_CHANNEL: stable
+  IRONFOX_SIGN: 0
+
+jobs:
+  build:
+    name: Build APK (${{ github.event.inputs.arch || 'arm64-v8a' }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    continue-on-error: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ['arm64-v8a']
+
+    steps:
+      - name: Checkout IronFox sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Free up disk space
+        run: |
+          echo "=== Disk space before cleanup ==="
+          df -h /
+          echo ""
+          echo "=== Removing unused preinstalled packages ==="
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost /usr/lib/jvm/* /usr/local/share/chrom* 2>/dev/null || true
+          sudo apt-get clean
+          sudo apt-get autoremove -y
+          echo ""
+          echo "=== Disk space after cleanup ==="
+          df -h /
+
+      - name: Show runner specs
+        run: |
+          echo "=== CPU ==="
+          nproc
+          echo ""
+          echo "=== Memory ==="
+          free -h
+          echo ""
+          echo "=== Disk ==="
+          df -h /
+          echo ""
+          echo "=== OS ==="
+          cat /etc/os-release | head -5
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            build-essential \
+            cmake \
+            clang \
+            gawk \
+            git \
+            jq \
+            m4 \
+            make \
+            nasm \
+            ninja-build \
+            patch \
+            perl \
+            python3 \
+            python3-pip \
+            shasum \
+            xz-utils \
+            yq \
+            zlib1g-dev \
+            curl \
+            wget \
+            unzip \
+            lib32z1 \
+            libncurses6 \
+            libstdc++6 \
+            libgtk-3-0 \
+            libasound2 \
+            libdbus-glib-1-2 \
+            libx11-xcb1 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxrandr2 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libgdk-pixbuf-2.0-0
+          echo "Dependencies installed."
+
+      - name: Pull IronFox Docker image
+        run: |
+          echo "Pulling IronFox build Docker image..."
+          docker pull registry.gitlab.com/ironfox-oss/ironfox:latest || true
+          echo "Docker image pulled (or skipped if unavailable)."
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "ci@ironfoxoss.org"
+          git config --global user.name "IronFox CI"
+
+      - name: Set up environment
+        run: |
+          # Initialize IronFox environment
+          bash scripts/env.sh || true
+          echo "Environment initialized."
+
+      - name: Download sources
+        timeout-minutes: 60
+        run: |
+          echo "Downloading Firefox + toolchain sources..."
+          # This downloads ~10GB of sources (Firefox, NDK, SDK, Rust, etc.)
+          bash scripts/get_sources.sh all download || {
+            echo "Source download failed. This is expected in CI with limited resources."
+            exit 1
+          }
+
+      - name: Apply patches
+        timeout-minutes: 30
+        run: |
+          echo "Applying IronFox patches..."
+          bash scripts/patches.sh || {
+            echo "Patch application failed."
+            exit 1
+          }
+
+      - name: Prebuild
+        timeout-minutes: 60
+        run: |
+          echo "Running prebuild..."
+          bash scripts/prebuild.sh || {
+            echo "Prebuild failed."
+            exit 1
+          }
+
+      - name: Build (arm64)
+        timeout-minutes: 300
+        run: |
+          echo "Building IronFox for arm64..."
+          echo "WARNING: This step requires ~32GB RAM and 3-6 hours."
+          echo "GitHub Actions free runners have 7GB RAM — this will likely OOM."
+          echo "If it fails, consider:"
+          echo "  1. Using a larger runner (runs-on: ubuntu-22.04-4core or ubuntu-22.04-8core)"
+          echo "  2. Splitting the build into stages (gecko, then fenix)"
+          echo "  3. Using a self-hosted runner with more resources"
+          bash scripts/build.sh arm64 fenix || {
+            echo "Build failed (likely OOM or timeout)."
+            echo "Check the logs above for details."
+            exit 1
+          }
+
+      - name: Sign APK
+        if: success()
+        timeout-minutes: 10
+        run: |
+          echo "Signing APK with debug key..."
+          IRONFOX_SIGN=1 bash scripts/sign.sh arm64 || true
+
+      - name: Upload APK artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ironfox-qwen-apk-${{ matrix.arch }}
+          path: |
+            artifacts/apk/
+            artifacts/apks/
+            build/src/mobile/android/fenix/app/build/outputs/apk/**/*.apk
+            build/src/mobile/android/fenix/app/build/outputs/bundle/**/*.aab
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ironfox-qwen-logs-${{ matrix.arch }}
+          path: |
+            build/logs/
+            artifacts/logs/
+          if-no-files-found: warn
+          retention-days: 7
+
+  release:
+    name: Release APK
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ironfox-qwen-apk-arm64-v8a
+          path: artifacts/
+
+      - name: List artifacts
+        run: |
+          find artifacts/ -type f -name "*.apk" -o -name "*.aab" | head -20
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*.apk
+            artifacts/**/*.aab
+          generate_release_notes: true
+          draft: true
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,77 @@
+{
+  "manifest_version": 3,
+  "name": "Qwen Agent Studio",
+  "short_name": "QwenStudio",
+  "version": "0.1.0",
+  "author": "Deividgames",
+  "description": "Transforms chat.qwen.ai into a real coding agent with tool calling, project workspace and terminal — like Opencode/Cursor inside Qwen.",
+  "homepage_url": "https://github.com/deivid22srk/qwen-agent-extension",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "qwen-agent-studio@deividgames.extensions",
+      "strict_min_version": "115.0"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "storage",
+    "downloads",
+    "scripting",
+    "activeTab",
+    "tabs",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "https://chat.qwen.ai/*",
+    "https://*.chat.qwen.ai/*",
+    "https://chat.qwen.ai/*"
+  ],
+  "background": {
+    "scripts": ["src/background.js"],
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chat.qwen.ai/*", "https://*.chat.qwen.ai/*"],
+      "js": ["src/lib/prompts.js", "src/lib/sanitize.js", "src/content.js"],
+      "css": ["src/content.css"],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_title": "Qwen Agent Studio",
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+    }
+  },
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": true
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/sidebar/sidebar.html",
+        "src/sidebar/sidebar.css",
+        "src/sidebar/sidebar.js",
+        "src/lib/prompts.js",
+        "src/lib/sanitize.js",
+        "icons/*"
+      ],
+      "matches": ["https://chat.qwen.ai/*", "https://*.chat.qwen.ai/*"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://chat.qwen.ai https://*.chat.qwen.ai https://*.alicdn.com;"
+  }
+}

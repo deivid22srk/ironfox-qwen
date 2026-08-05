@@ -1,0 +1,408 @@
+/* Qwen Agent Studio - Content CSS
+ * Estiliza a sidebar lateral, o botão flutuante e os elementos injetados
+ * no chat.qwen.ai.
+ *
+ * Observações:
+ *  - Cores escuras para combinar com o tema dark do Qwen.
+ *  - Usamos #qwen-studio-* prefix para evitar colisões.
+ *  - All rules scoped under #qwen-studio-sidebar or #qwen-studio-fab.
+ */
+
+#qwen-studio-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2147483646;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #7C3AED 0%, #06B6D4 100%);
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+#qwen-studio-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 24px rgba(124, 58, 237, 0.6);
+}
+
+#qwen-studio-fab.qs-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.6);
+}
+
+#qwen-studio-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 380px;
+  max-width: 90vw;
+  height: 100vh;
+  background: #0B0B0F;
+  color: #E5E5E5;
+  z-index: 2147483647;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  border-left: 1px solid #1F1F2A;
+}
+
+#qwen-studio-sidebar.qs-open {
+  transform: translateX(0);
+}
+
+#qwen-studio-sidebar .qs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%);
+  border-bottom: 1px solid #1F1F2A;
+}
+
+#qwen-studio-sidebar .qs-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #F5F5F5;
+}
+
+#qwen-studio-sidebar .qs-logo {
+  color: #06B6D4;
+  font-size: 16px;
+}
+
+#qwen-studio-sidebar .qs-actions {
+  display: flex;
+  gap: 6px;
+}
+
+#qwen-studio-sidebar .qs-btn-icon {
+  background: transparent;
+  border: 1px solid #2A2A36;
+  color: #B5B5B5;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+#qwen-studio-sidebar .qs-btn-icon:hover {
+  background: #1A1A24;
+  border-color: #3A3A4A;
+  color: #F5F5F5;
+}
+
+#qwen-studio-sidebar .qs-section {
+  border-bottom: 1px solid #1F1F2A;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#qwen-studio-sidebar .qs-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7A7A8A;
+  padding: 10px 14px 4px;
+  font-weight: 600;
+}
+
+#qwen-studio-sidebar .qs-projects {
+  flex-shrink: 0;
+}
+
+#qwen-studio-sidebar .qs-project-row {
+  display: flex;
+  gap: 6px;
+  padding: 4px 14px 10px;
+}
+
+#qwen-studio-sidebar .qs-project-select {
+  flex: 1;
+  background: #15151C;
+  color: #E5E5E5;
+  border: 1px solid #2A2A36;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+#qwen-studio-sidebar .qs-project-select:focus {
+  border-color: #7C3AED;
+}
+
+#qwen-studio-sidebar .qs-btn {
+  background: #1A1A24;
+  color: #E5E5E5;
+  border: 1px solid #2A2A36;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+#qwen-studio-sidebar .qs-btn:hover {
+  background: #25252F;
+  border-color: #3A3A4A;
+}
+
+#qwen-studio-sidebar .qs-files {
+  flex: 1 1 40%;
+  min-height: 120px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#qwen-studio-sidebar .qs-tree {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 0 12px;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  font-size: 12px;
+}
+
+#qwen-studio-sidebar .qs-tree .qs-empty,
+#qwen-studio-sidebar .qs-tree .qs-loading,
+#qwen-studio-sidebar .qs-tree .qs-error {
+  padding: 8px 14px;
+  color: #7A7A8A;
+  font-style: italic;
+}
+
+#qwen-studio-sidebar .qs-tree .qs-error {
+  color: #EF4444;
+}
+
+#qwen-studio-sidebar .qs-tree-dir-header,
+#qwen-studio-sidebar .qs-tree-file {
+  padding: 3px 14px;
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #C5C5C5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#qwen-studio-sidebar .qs-tree-dir-header {
+  cursor: pointer;
+  color: #E5E5E5;
+  font-weight: 500;
+}
+
+#qwen-studio-sidebar .qs-tree-dir-header:hover {
+  background: rgba(124, 58, 237, 0.08);
+}
+
+#qwen-studio-sidebar .qs-tree-file:hover {
+  background: rgba(6, 182, 212, 0.08);
+}
+
+#qwen-studio-sidebar .qs-tree-dir-header.qs-collapsed::after {
+  content: " ▸";
+  color: #5A5A6A;
+  margin-left: auto;
+  padding-right: 14px;
+}
+
+#qwen-studio-sidebar .qs-tree-dir-header:not(.qs-collapsed)::after {
+  content: " ▾";
+  color: #5A5A6A;
+  margin-left: auto;
+  padding-right: 14px;
+}
+
+#qwen-studio-sidebar .qs-tree .qs-collapsed > *:not(.qs-tree-dir-header) {
+  display: none;
+}
+
+#qwen-studio-sidebar .qs-tree .qs-collapsed {
+  /* nothing else - we hide children via display:none on the wrap */
+}
+
+#qwen-studio-sidebar .qs-terminal {
+  flex: 1 1 40%;
+  min-height: 120px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#qwen-studio-sidebar .qs-console {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 14px 12px;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  font-size: 11px;
+}
+
+#qwen-studio-sidebar .qs-console:empty::before {
+  content: "No tool calls yet. Send a message to start the agent.";
+  color: #5A5A6A;
+  font-style: italic;
+  display: block;
+  padding: 8px 0;
+}
+
+#qwen-studio-sidebar .qs-tool-call {
+  background: #15151C;
+  border: 1px solid #2A2A36;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  padding: 6px 8px;
+}
+
+#qwen-studio-sidebar .qs-tool-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+#qwen-studio-sidebar .qs-tool-name {
+  color: #06B6D4;
+  font-family: monospace;
+}
+
+#qwen-studio-sidebar .qs-tool-error {
+  color: #EF4444;
+  font-size: 10px;
+  font-weight: normal;
+}
+
+#qwen-studio-sidebar .qs-tool-status {
+  margin-left: auto;
+  font-size: 10px;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+#qwen-studio-sidebar .qs-tool-status.qs-pending {
+  background: #422006;
+  color: #FBBF24;
+}
+
+#qwen-studio-sidebar .qs-tool-status.qs-ok {
+  background: #052E16;
+  color: #4ADE80;
+}
+
+#qwen-studio-sidebar .qs-tool-status.qs-fail {
+  background: #450A0A;
+  color: #F87171;
+}
+
+#qwen-studio-sidebar .qs-params {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #B5B5B5;
+}
+
+#qwen-studio-sidebar .qs-param {
+  display: flex;
+  gap: 4px;
+  word-break: break-all;
+}
+
+#qwen-studio-sidebar .qs-key {
+  color: #A78BFA;
+}
+
+#qwen-studio-sidebar .qs-val {
+  color: #D5D5D5;
+  font-family: monospace;
+  flex: 1;
+  white-space: pre-wrap;
+}
+
+#qwen-studio-sidebar .qs-result {
+  margin-top: 4px;
+}
+
+#qwen-studio-sidebar .qs-result pre {
+  background: #0A0A0F;
+  border: 1px solid #1F1F2A;
+  border-radius: 4px;
+  padding: 6px;
+  margin: 0;
+  color: #C5C5C5;
+  font-family: monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow: auto;
+}
+
+#qwen-studio-sidebar .qs-tree-icon {
+  font-size: 12px;
+  filter: saturate(0.6);
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  #qwen-studio-sidebar {
+    width: 100vw;
+    max-width: 100vw;
+  }
+  #qwen-studio-fab {
+    bottom: 80px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+}
+
+/* Scrollbar styling */
+#qwen-studio-sidebar ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+#qwen-studio-sidebar ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#qwen-studio-sidebar ::-webkit-scrollbar-thumb {
+  background: #2A2A36;
+  border-radius: 4px;
+}
+
+#qwen-studio-sidebar ::-webkit-scrollbar-thumb:hover {
+  background: #3A3A4A;
+}
