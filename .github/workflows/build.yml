@@ -132,17 +132,23 @@ jobs:
 
       - name: Set up environment
         run: |
+          # Provide CI_PIPELINE_CREATED_AT that env_ci.sh expects (GitLab CI var)
+          export CI_PIPELINE_CREATED_AT="${CI_PIPELINE_CREATED_AT:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+          echo "CI_PIPELINE_CREATED_AT=$CI_PIPELINE_CREATED_AT" >> "$GITHUB_ENV"
           # Initialize IronFox environment
           bash scripts/env.sh || true
           echo "Environment initialized."
 
       - name: Download sources
         timeout-minutes: 60
+        env:
+          CI_PIPELINE_CREATED_AT: ${{ env.CI_PIPELINE_CREATED_AT }}
         run: |
           echo "Downloading Firefox + toolchain sources..."
+          echo "CI_PIPELINE_CREATED_AT=$CI_PIPELINE_CREATED_AT"
           # This downloads ~10GB of sources (Firefox, NDK, SDK, Rust, etc.)
           bash scripts/get_sources.sh all download || {
-            echo "Source download failed. This is expected in CI with limited resources."
+            echo "Source download failed."
             exit 1
           }
 
