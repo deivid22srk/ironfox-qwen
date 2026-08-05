@@ -73,6 +73,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update -qq
+          # Note: shasum is provided by perl; yq is installed from GitHub releases
           sudo apt-get install -y -qq \
             build-essential \
             cmake \
@@ -88,9 +89,7 @@ jobs:
             perl \
             python3 \
             python3-pip \
-            shasum \
             xz-utils \
-            yq \
             zlib1g-dev \
             curl \
             wget \
@@ -110,6 +109,14 @@ jobs:
             libpango-1.0-0 \
             libcairo2 \
             libgdk-pixbuf-2.0-0
+          # Install yq (Mike Farah's Go version, which is what IronFox expects)
+          echo "Installing yq..."
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+          # shasum is part of perl
+          which shasum && shasum --version
           echo "Dependencies installed."
 
       - name: Pull IronFox Docker image
